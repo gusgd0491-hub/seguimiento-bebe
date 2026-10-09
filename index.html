@@ -1,0 +1,989 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Seguimiento del bebé</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;1,9..144,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #F2F0EB;
+    --card: #FFFFFF;
+    --text: #262A33;
+    --muted: #767C87;
+    --border: #E3E0D8;
+    --amber: #D99A3D;
+    --amber-deep: #B97C25;
+    --sage: #6B9080;
+    --sage-deep: #4F7363;
+    --brick: #B3433B;
+    --brick-bg: #F6E4E1;
+    --navy: #2C3444;
+    --radius-lg: 22px;
+    --radius-md: 14px;
+    --radius-sm: 10px;
+    --shell-max: 480px;
+    color-scheme: light;
+  }
+  :root[data-theme="dark"] {
+    --bg: #161B26;
+    --card: #1F2530;
+    --text: #EDEAE2;
+    --muted: #949CAA;
+    --border: #2E3645;
+    --brick-bg: #3A2320;
+    color-scheme: dark;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #161B26;
+      --card: #1F2530;
+      --text: #EDEAE2;
+      --muted: #949CAA;
+      --border: #2E3645;
+      --brick-bg: #3A2320;
+      color-scheme: dark;
+    }
+  }
+  * { box-sizing: border-box; }
+  html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+  html, body {
+    height: 100%;
+    margin: 0;
+  }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    -webkit-font-smoothing: antialiased;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  h1, h2, h3, .display {
+    font-family: "Fraunces", Georgia, serif;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    margin: 0;
+  }
+  button, input, select, textarea { font-family: inherit; color: inherit; }
+  #app { max-width: var(--shell-max); margin: 0 auto; min-height: 100%; display: flex; flex-direction: column; position: relative; }
+
+  /* ---------- Setup screen ---------- */
+  #setupScreen {
+    padding: 28px 22px calc(28px + env(safe-area-inset-bottom, 0px));
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+  .setup-hero { padding: 12px 0 4px; }
+  .setup-hero .display { font-size: 28px; line-height: 1.15; }
+  .setup-hero p { color: var(--muted); margin-top: 8px; font-size: 15px; line-height: 1.5; }
+  .field { display: flex; flex-direction: column; gap: 6px; }
+  .field label { font-size: 13px; font-weight: 600; color: var(--muted); }
+  .field input, .field select {
+    border: 1.5px solid var(--border);
+    background: var(--card);
+    border-radius: var(--radius-sm);
+    padding: 12px 14px;
+    font-size: 16px;
+    color: var(--text);
+  }
+  .field input:focus, .field select:focus, button:focus-visible {
+    outline: 2px solid var(--amber);
+    outline-offset: 1px;
+  }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .btn-primary {
+    background: var(--amber-deep);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius-md);
+    padding: 15px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .btn-primary:active { transform: scale(0.98); }
+  .btn-secondary {
+    background: transparent;
+    border: 1.5px solid var(--border);
+    color: var(--text);
+    border-radius: var(--radius-md);
+    padding: 13px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  /* ---------- Main app shell ---------- */
+  #mainApp { display: none; flex-direction: column; min-height: 100%; }
+  #mainApp.active { display: flex; }
+
+  .status-strip {
+    position: relative;
+    padding: calc(16px + env(safe-area-inset-top, 0px)) 20px 22px;
+    background: linear-gradient(135deg, rgba(217,154,61,0.22), rgba(107,144,128,0.14));
+    overflow: hidden;
+  }
+  .status-row { display: flex; align-items: center; gap: 14px; }
+  .avatar {
+    width: 52px; height: 52px; border-radius: 50%;
+    background: var(--amber-deep); color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-family: "Fraunces", serif; font-size: 22px; font-weight: 600;
+    flex-shrink: 0;
+  }
+  .status-text .display { font-size: 22px; }
+  .status-text .sub { color: var(--muted); font-size: 14px; margin-top: 2px; }
+  .flag-btn {
+    position: absolute; top: calc(16px + env(safe-area-inset-top, 0px)); right: 18px;
+    background: var(--card); border: 1.5px solid var(--brick); color: var(--brick);
+    border-radius: 999px; width: 40px; height: 40px; font-size: 18px;
+    display: flex; align-items: center; justify-content: center; cursor: pointer;
+  }
+
+  main { flex: 1; overflow-y: auto; padding: 18px 18px 90px; }
+  .panel { display: none; flex-direction: column; gap: 18px; }
+  .panel.active { display: flex; }
+
+  .stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .stat-card {
+    background: var(--card); border-radius: var(--radius-md); padding: 12px 10px;
+    text-align: center; border: 1px solid var(--border);
+  }
+  .stat-card .num { font-family: "Fraunces", serif; font-size: 22px; font-weight: 600; }
+  .stat-card .lbl { font-size: 11.5px; color: var(--muted); margin-top: 2px; }
+
+  .quick-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .quick-btn {
+    border: none; border-radius: var(--radius-md); padding: 16px 8px;
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    font-size: 13px; font-weight: 600; cursor: pointer; color: #fff;
+  }
+  .quick-btn .emoji { font-size: 24px; }
+  .quick-btn.feed { background: var(--amber-deep); }
+  .quick-btn.diaper { background: var(--sage-deep); }
+  .quick-btn.sleep { background: var(--navy); }
+
+  .section-title { font-size: 15px; font-weight: 700; margin-top: 4px; }
+  .timeline { display: flex; flex-direction: column; }
+  .tl-item {
+    display: flex; gap: 12px; padding: 11px 2px; border-bottom: 1px solid var(--border);
+    align-items: center;
+  }
+  .tl-item:last-child { border-bottom: none; }
+  .tl-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+  .tl-dot.feed { background: var(--amber-deep); }
+  .tl-dot.diaper { background: var(--sage-deep); }
+  .tl-dot.sleep { background: var(--navy); }
+  .tl-body { flex: 1; }
+  .tl-title { font-size: 14.5px; font-weight: 600; }
+  .tl-meta { font-size: 12.5px; color: var(--muted); }
+  .tl-del { background: none; border: none; color: var(--muted); font-size: 18px; cursor: pointer; padding: 4px 8px; }
+  .empty-state { color: var(--muted); font-size: 14px; padding: 18px 4px; text-align: center; }
+
+  /* Growth */
+  .seg-control { display: flex; background: var(--card); border: 1px solid var(--border); border-radius: 999px; padding: 4px; }
+  .seg-btn { flex: 1; border: none; background: transparent; padding: 9px 4px; border-radius: 999px; font-size: 13px; font-weight: 600; color: var(--muted); cursor: pointer; }
+  .seg-btn.active { background: var(--amber-deep); color: #fff; }
+  .chart-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 14px 10px; }
+  .chart-legend { display: flex; gap: 14px; font-size: 12px; color: var(--muted); margin-top: 6px; flex-wrap: wrap; }
+  .legend-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; }
+  .form-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+
+  /* Vaccines / Milestones */
+  .age-group-label { font-size: 12.5px; font-weight: 700; color: var(--sage-deep); margin: 10px 0 2px; }
+  .list-item { display: flex; align-items: center; gap: 12px; padding: 12px 2px; border-bottom: 1px solid var(--border); }
+  .list-item:last-child { border-bottom: none; }
+  .check-circle {
+    width: 26px; height: 26px; border-radius: 50%; border: 2px solid var(--border);
+    flex-shrink: 0; cursor: pointer; display: flex; align-items: center; justify-content: center;
+    background: var(--card); font-size: 14px; color: transparent;
+  }
+  .check-circle.done { background: var(--sage-deep); border-color: var(--sage-deep); color: #fff; }
+  .li-body { flex: 1; }
+  .li-title { font-size: 14.5px; font-weight: 600; }
+  .li-meta { font-size: 12.5px; color: var(--muted); margin-top: 1px; }
+  .badge { font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 999px; }
+  .badge.pending { background: var(--border); color: var(--muted); }
+  .badge.soon { background: rgba(217,154,61,0.22); color: var(--amber-deep); }
+  .badge.done { background: rgba(107,144,128,0.22); color: var(--sage-deep); }
+
+  /* Mas / more */
+  .more-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+  .more-card h3 { font-size: 15px; }
+  .more-card p { font-size: 13.5px; color: var(--muted); line-height: 1.5; margin: 0; }
+  textarea.backup-area { width: 100%; min-height: 90px; border: 1.5px solid var(--border); background: var(--bg); border-radius: var(--radius-sm); padding: 10px; font-size: 12.5px; color: var(--text); }
+  .link-btn { color: var(--amber-deep); font-weight: 600; font-size: 14px; background: none; border: none; cursor: pointer; padding: 0; text-align: left; }
+  .disclaimer { font-size: 12px; color: var(--muted); line-height: 1.5; padding: 4px 2px 0; }
+
+  /* Bottom nav */
+  nav.bottom-nav {
+    position: sticky; bottom: 0; left: 0; right: 0;
+    background: var(--card); border-top: 1px solid var(--border);
+    display: flex; justify-content: space-around;
+    padding: 8px 4px calc(8px + env(safe-area-inset-bottom, 0px));
+  }
+  .nav-btn {
+    background: none; border: none; display: flex; flex-direction: column; align-items: center; gap: 3px;
+    color: var(--muted); font-size: 10.5px; font-weight: 600; cursor: pointer; padding: 4px 6px; flex: 1;
+  }
+  .nav-btn .nav-emoji { font-size: 19px; }
+  .nav-btn.active { color: var(--amber-deep); }
+
+  /* Modal / sheet */
+  .sheet-backdrop {
+    position: fixed; inset: 0; background: rgba(20,18,15,0.45);
+    display: none; align-items: flex-end; justify-content: center; z-index: 50;
+  }
+  .sheet-backdrop.open { display: flex; }
+  .sheet {
+    background: var(--bg); width: 100%; max-width: var(--shell-max);
+    border-radius: 22px 22px 0 0; padding: 20px 20px calc(20px + env(safe-area-inset-bottom, 0px));
+    display: flex; flex-direction: column; gap: 14px; max-height: 85vh; overflow-y: auto;
+  }
+  .sheet-title { font-size: 18px; }
+  .choice-row { display: flex; gap: 8px; flex-wrap: wrap; }
+  .choice-chip {
+    border: 1.5px solid var(--border); background: var(--card); border-radius: 999px;
+    padding: 9px 14px; font-size: 13.5px; font-weight: 600; cursor: pointer; color: var(--text);
+  }
+  .choice-chip.active { background: var(--amber-deep); border-color: var(--amber-deep); color: #fff; }
+  .sheet-actions { display: flex; gap: 10px; margin-top: 6px; }
+  .sheet-actions button { flex: 1; }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { transition: none !important; animation: none !important; }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- SETUP -->
+  <div id="setupScreen">
+    <div class="setup-hero">
+      <div class="display">Hola, Brendis 👋</div>
+      <p>Esta herramienta es solo para ti. Antes de empezar, cuéntanos sobre tu bebé. Todo se guarda únicamente en este teléfono — no necesitas cuenta de nada.</p>
+    </div>
+    <div class="field">
+      <label for="su-name">Nombre del bebé</label>
+      <input id="su-name" type="text" placeholder="Ej. Mateo">
+    </div>
+    <div class="row2">
+      <div class="field">
+        <label for="su-dob">Fecha de nacimiento</label>
+        <input id="su-dob" type="date">
+      </div>
+      <div class="field">
+        <label for="su-sex">Sexo</label>
+        <select id="su-sex">
+          <option value="boy">Niño</option>
+          <option value="girl">Niña</option>
+        </select>
+      </div>
+    </div>
+    <div class="row2">
+      <div class="field">
+        <label for="su-weight">Peso al nacer (kg)</label>
+        <input id="su-weight" type="number" step="0.01" placeholder="3.30">
+      </div>
+      <div class="field">
+        <label for="su-height">Talla al nacer (cm)</label>
+        <input id="su-height" type="number" step="0.1" placeholder="50.0">
+      </div>
+    </div>
+    <div class="field">
+      <label for="su-head">Perímetro cefálico al nacer (cm) — opcional</label>
+      <input id="su-head" type="number" step="0.1" placeholder="34.5">
+    </div>
+    <button class="btn-primary" id="su-save">Guardar y comenzar</button>
+    <p class="disclaimer">Esta herramienta organiza información para apoyar el seguimiento diario; no sustituye las consultas ni indicaciones de tu pediatra. Ante cualquier urgencia, acude directamente con tu médico.</p>
+  </div>
+
+  <!-- MAIN APP -->
+  <div id="mainApp">
+    <header class="status-strip">
+      <button class="flag-btn" id="openFlags" aria-label="Focos rojos de alerta">⚠</button>
+      <div class="status-row">
+        <div class="avatar" id="avatarInitial">B</div>
+        <div class="status-text">
+          <div class="display" id="babyNameDisplay">Bebé</div>
+          <div class="sub" id="babyAgeDisplay">—</div>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <!-- HOY -->
+      <section class="panel" id="panel-hoy">
+        <div class="stats-row">
+          <div class="stat-card"><div class="num" id="stat-feed">0</div><div class="lbl">Tomas hoy</div></div>
+          <div class="stat-card"><div class="num" id="stat-diaper">0</div><div class="lbl">Pañales hoy</div></div>
+          <div class="stat-card"><div class="num" id="stat-sleep">0h</div><div class="lbl">Sueño hoy</div></div>
+        </div>
+        <div class="quick-row">
+          <button class="quick-btn feed" id="qb-feed"><span class="emoji">🍼</span>Alimentación</button>
+          <button class="quick-btn diaper" id="qb-diaper"><span class="emoji">👶</span>Pañal</button>
+          <button class="quick-btn sleep" id="qb-sleep"><span class="emoji">😴</span>Sueño</button>
+        </div>
+        <div>
+          <div class="section-title">Hoy</div>
+          <div class="timeline" id="timelineToday"></div>
+        </div>
+      </section>
+
+      <!-- CRECIMIENTO -->
+      <section class="panel" id="panel-crecimiento">
+        <div class="seg-control" id="metricSeg">
+          <button class="seg-btn active" data-metric="weight">Peso</button>
+          <button class="seg-btn" data-metric="height">Talla</button>
+          <button class="seg-btn" data-metric="head">Perímetro</button>
+        </div>
+        <div class="chart-card">
+          <div id="chartHolder"></div>
+          <div class="chart-legend">
+            <span><span class="legend-dot" style="background:var(--amber-deep)"></span>Tu bebé</span>
+            <span><span class="legend-dot" style="background:var(--sage)"></span>Rango de referencia OMS (aprox.)</span>
+          </div>
+        </div>
+        <div class="form-card">
+          <div class="section-title">Agregar medición</div>
+          <div class="field">
+            <label for="gr-date">Fecha</label>
+            <input id="gr-date" type="date">
+          </div>
+          <div class="row2">
+            <div class="field">
+              <label for="gr-weight">Peso (kg)</label>
+              <input id="gr-weight" type="number" step="0.01">
+            </div>
+            <div class="field">
+              <label for="gr-height">Talla (cm)</label>
+              <input id="gr-height" type="number" step="0.1">
+            </div>
+          </div>
+          <div class="field">
+            <label for="gr-head">Perímetro cefálico (cm) — opcional</label>
+            <input id="gr-head" type="number" step="0.1">
+          </div>
+          <button class="btn-primary" id="gr-save">Agregar medición</button>
+        </div>
+        <p class="disclaimer">Las curvas de referencia son una aproximación orientativa a los estándares de crecimiento de la OMS, no una gráfica clínica exacta. Usa la cartilla oficial de tu pediatra como referencia definitiva.</p>
+      </section>
+
+      <!-- VACUNAS -->
+      <section class="panel" id="panel-vacunas">
+        <p class="disclaimer" style="margin-top:0">Esquema de referencia basado en el Esquema Nacional de Vacunación de México. Puede variar según la marca de vacuna y las indicaciones de tu pediatra — confirma siempre con la Cartilla Nacional de Salud.</p>
+        <div id="vaccineList"></div>
+      </section>
+
+      <!-- HITOS -->
+      <section class="panel" id="panel-hitos">
+        <p class="disclaimer" style="margin-top:0">Cada bebé se desarrolla a su propio ritmo; estos son rangos orientativos, no un estándar estricto.</p>
+        <div id="milestoneList"></div>
+      </section>
+
+      <!-- MAS -->
+      <section class="panel" id="panel-mas">
+        <div class="more-card">
+          <h3>Información del bebé</h3>
+          <p id="moreInfoSummary"></p>
+          <button class="link-btn" id="editBabyInfo">Editar información</button>
+        </div>
+        <div class="more-card">
+          <h3>Compartir resumen de hoy</h3>
+          <p>Genera un texto con lo registrado hoy para compartirlo con tu pareja, pediatra o familiar — útil si cada quien usa su propio teléfono.</p>
+          <button class="btn-secondary" id="shareToday">Compartir por WhatsApp</button>
+        </div>
+        <div class="more-card">
+          <h3>Respaldo y sincronización manual</h3>
+          <p>Los datos viven solo en este teléfono. Para pasarlos a otro dispositivo: copia este código aquí y pégalo en "Importar" en el otro teléfono.</p>
+          <button class="btn-secondary" id="exportData">Copiar código de respaldo</button>
+          <textarea class="backup-area" id="importArea" placeholder="Pega aquí el código de respaldo para importar..."></textarea>
+          <button class="btn-secondary" id="importData">Importar código</button>
+        </div>
+        <p class="disclaimer">Seguimiento del bebé · guía de apoyo, no reemplaza la atención médica profesional.</p>
+      </section>
+    </main>
+
+    <nav class="bottom-nav">
+      <button class="nav-btn active" data-tab="hoy"><span class="nav-emoji">🏠</span>Hoy</button>
+      <button class="nav-btn" data-tab="crecimiento"><span class="nav-emoji">📈</span>Crecimiento</button>
+      <button class="nav-btn" data-tab="vacunas"><span class="nav-emoji">💉</span>Vacunas</button>
+      <button class="nav-btn" data-tab="hitos"><span class="nav-emoji">⭐</span>Hitos</button>
+      <button class="nav-btn" data-tab="mas"><span class="nav-emoji">⋯</span>Más</button>
+    </nav>
+  </div>
+</div>
+
+<!-- Quick-log sheet -->
+<div class="sheet-backdrop" id="logSheetBackdrop">
+  <div class="sheet" id="logSheet"></div>
+</div>
+
+<!-- Red flags modal -->
+<div class="sheet-backdrop" id="flagsBackdrop">
+  <div class="sheet">
+    <div class="sheet-title display">⚠ Focos rojos — busca atención médica de inmediato si notas:</div>
+    <ul style="margin:0;padding-left:20px;display:flex;flex-direction:column;gap:9px;font-size:14px;line-height:1.4;">
+      <li>Fiebre (38°C o más), sobre todo si el bebé tiene menos de 3 meses</li>
+      <li>Dificultad para respirar, quejido, aleteo nasal o color azulado en labios/piel</li>
+      <li>Rechaza el alimento por completo o está muy decaído / difícil de despertar</li>
+      <li>Vómito en proyectil, o vómito con sangre o bilis (verde)</li>
+      <li>Menos pañales mojados de lo habitual (posible deshidratación)</li>
+      <li>Ictericia (color amarillo) que empeora o se extiende a brazos y piernas</li>
+      <li>Llanto inconsolable o muy distinto al habitual, por tiempo prolongado</li>
+      <li>Convulsiones o movimientos anormales</li>
+      <li>Enrojecimiento, mal olor o secreción en el cordón umbilical</li>
+    </ul>
+    <button class="btn-primary" id="closeFlags">Entendido</button>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var STORAGE_KEY = "babyTrackerV1";
+  var state = null;
+
+  function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+
+  function loadState(){
+    try {
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) return JSON.parse(raw);
+    } catch(e) { console.error("read failed", e); }
+    return null;
+  }
+  function saveState(){
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+    catch(e) { console.error("save failed", e); }
+  }
+
+  function defaultState(){
+    return {
+      baby: null, // {name, dob, sex, birthWeight, birthHeight, birthHead}
+      logs: [],   // {id, type, ts, detail}
+      growth: [], // {id, date, weight, height, head}
+      vaccines: {}, // id -> {done, date}
+      milestones: {} // id -> {done, date}
+    };
+  }
+
+  /* ---------------- Reference data ---------------- */
+  var VACCINES = [
+    {id:"bcg", month:0, name:"BCG", desc:"Protege contra formas graves de tuberculosis"},
+    {id:"hepb1", month:0, name:"Hepatitis B (1ª dosis)", desc:"Al nacer"},
+    {id:"penta1", month:2, name:"Pentavalente acelular (1ª dosis)", desc:"Difteria, tos ferina, tétanos, polio, Hib"},
+    {id:"neumo1", month:2, name:"Neumocócica conjugada (1ª dosis)", desc:""},
+    {id:"rota1", month:2, name:"Rotavirus (1ª dosis)", desc:""},
+    {id:"penta2", month:4, name:"Pentavalente acelular (2ª dosis)", desc:""},
+    {id:"neumo2", month:4, name:"Neumocócica conjugada (2ª dosis)", desc:""},
+    {id:"rota2", month:4, name:"Rotavirus (2ª dosis)", desc:""},
+    {id:"penta3", month:6, name:"Pentavalente acelular (3ª dosis)", desc:""},
+    {id:"flu1", month:6, name:"Influenza (1ª dosis de temporada)", desc:"Esquema de primovacunación"},
+    {id:"flu2", month:7, name:"Influenza (2ª dosis)", desc:""},
+    {id:"srp1", month:12, name:"SRP — Triple viral (1ª dosis)", desc:"Sarampión, rubéola, parotiditis"},
+    {id:"neumoref", month:12, name:"Neumocócica conjugada (refuerzo)", desc:""}
+  ];
+
+  var MILESTONES = [
+    {range:"0–1 mes", items:[
+      {id:"m1", text:"Fija la mirada brevemente en un rostro cercano"},
+      {id:"m2", text:"Levanta la cabeza por instantes boca abajo"},
+      {id:"m3", text:"Se sobresalta con ruidos fuertes (reflejo de Moro)"}
+    ]},
+    {range:"1–3 meses", items:[
+      {id:"m4", text:"Sonríe en respuesta a otra persona (sonrisa social)"},
+      {id:"m5", text:"Sigue objetos en movimiento con la mirada"},
+      {id:"m6", text:"Sostiene la cabeza con más firmeza"},
+      {id:"m7", text:"Emite sonidos y arrullos"}
+    ]},
+    {range:"3–6 meses", items:[
+      {id:"m8", text:"Se voltea de boca arriba a boca abajo"},
+      {id:"m9", text:"Alcanza y agarra objetos con la mano"},
+      {id:"m10", text:"Ríe a carcajadas"},
+      {id:"m11", text:"Reconoce caras familiares"}
+    ]},
+    {range:"6–9 meses", items:[
+      {id:"m12", text:"Se sienta sin apoyo"},
+      {id:"m13", text:"Gatea o se arrastra"},
+      {id:"m14", text:"Balbucea sílabas repetidas (ba-ba, ma-ma)"},
+      {id:"m15", text:"Empieza a comer alimentos de textura suave"}
+    ]},
+    {range:"9–12 meses", items:[
+      {id:"m16", text:"Se para con apoyo"},
+      {id:"m17", text:"Dice una o dos palabras con intención"},
+      {id:"m18", text:"Usa la pinza fina (pulgar e índice)"},
+      {id:"m19", text:"Responde cuando lo llaman por su nombre"}
+    ]}
+  ];
+
+  // Approximate WHO growth-standard medians (not clinical-grade), by sex, month -> value
+  var GROWTH_REF = {
+    boy: {
+      weight: {0:3.3,1:4.5,2:5.6,3:6.4,4:7.0,5:7.5,6:7.9,9:8.9,12:9.6},
+      height: {0:49.9,1:54.7,2:58.4,3:61.4,4:63.9,5:65.9,6:67.6,9:72.0,12:75.7},
+      head:   {0:34.5,1:37.3,2:39.1,3:40.5,6:43.3,9:45.0,12:46.1}
+    },
+    girl: {
+      weight: {0:3.2,1:4.2,2:5.1,3:5.8,4:6.4,5:6.9,6:7.3,9:8.2,12:8.9},
+      height: {0:49.1,1:53.7,2:57.1,3:59.8,4:62.1,5:64.0,6:65.7,9:70.1,12:74.0},
+      head:   {0:33.9,1:36.5,2:38.3,3:39.5,6:42.2,9:43.8,12:44.9}
+    }
+  };
+  var BAND_PCT = { weight: 0.16, height: 0.05, head: 0.045 };
+  var METRIC_LABEL = { weight: "Peso (kg)", height: "Talla (cm)", head: "Perímetro cefálico (cm)" };
+  var METRIC_FIELD = { weight: "weight", height: "height", head: "head" };
+
+  /* ---------------- Date helpers ---------------- */
+  function parseDate(s){ // "YYYY-MM-DD" -> Date at local midnight
+    var p = s.split("-"); return new Date(parseInt(p[0],10), parseInt(p[1],10)-1, parseInt(p[2],10));
+  }
+  function todayStr(){
+    var d = new Date();
+    return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+  }
+  function daysBetween(a,b){ return Math.round((b-a)/86400000); }
+  function monthsBetween(dobStr, dateStr){
+    var a = parseDate(dobStr), b = parseDate(dateStr);
+    return daysBetween(a,b) / 30.4375;
+  }
+  function ageDisplayString(dobStr){
+    var days = daysBetween(parseDate(dobStr), new Date());
+    if (days < 14) return days + (days===1 ? " día" : " días");
+    if (days < 70) return Math.floor(days/7) + " semanas";
+    var months = Math.floor(days/30.4375);
+    return months + (months===1 ? " mes" : " meses");
+  }
+  function fmtTime(ts){
+    var d = new Date(ts);
+    return String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0");
+  }
+  function fmtDateShort(s){
+    var d = parseDate(s);
+    var months=["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
+    return d.getDate()+" "+months[d.getMonth()];
+  }
+
+  /* ---------------- Setup screen ---------------- */
+  function showSetup(){
+    document.getElementById("setupScreen").style.display = "flex";
+    document.getElementById("mainApp").classList.remove("active");
+  }
+  function showMain(){
+    document.getElementById("setupScreen").style.display = "none";
+    document.getElementById("mainApp").classList.add("active");
+    renderAll();
+  }
+
+  document.getElementById("su-save").addEventListener("click", function(){
+    var name = document.getElementById("su-name").value.trim();
+    var dob = document.getElementById("su-dob").value;
+    var sex = document.getElementById("su-sex").value;
+    var weight = parseFloat(document.getElementById("su-weight").value);
+    var height = parseFloat(document.getElementById("su-height").value);
+    var head = parseFloat(document.getElementById("su-head").value);
+    if (!name || !dob || isNaN(weight) || isNaN(height)){
+      alert("Por favor completa al menos el nombre, fecha de nacimiento, peso y talla.");
+      return;
+    }
+    state.baby = { name: name, dob: dob, sex: sex, birthWeight: weight, birthHeight: height, birthHead: isNaN(head)?null:head };
+    state.growth.push({ id: uid(), date: dob, weight: weight, height: height, head: isNaN(head)?null:head });
+    saveState();
+    showMain();
+  });
+
+  function prefillSetupForEdit(){
+    if (!state.baby) return;
+    document.getElementById("su-name").value = state.baby.name;
+    document.getElementById("su-dob").value = state.baby.dob;
+    document.getElementById("su-sex").value = state.baby.sex;
+    document.getElementById("su-weight").value = state.baby.birthWeight;
+    document.getElementById("su-height").value = state.baby.birthHeight;
+    document.getElementById("su-head").value = state.baby.birthHead || "";
+  }
+
+  /* ---------------- Tabs ---------------- */
+  var tabs = ["hoy","crecimiento","vacunas","hitos","mas"];
+  document.querySelectorAll(".nav-btn").forEach(function(btn){
+    btn.addEventListener("click", function(){
+      var tab = btn.getAttribute("data-tab");
+      tabs.forEach(function(t){
+        document.getElementById("panel-"+t).classList.toggle("active", t===tab);
+      });
+      document.querySelectorAll(".nav-btn").forEach(function(b){ b.classList.toggle("active", b===btn); });
+    });
+  });
+
+  /* ---------------- Render: header ---------------- */
+  function renderHeader(){
+    if (!state.baby) return;
+    document.getElementById("babyNameDisplay").textContent = state.baby.name;
+    document.getElementById("babyAgeDisplay").textContent = ageDisplayString(state.baby.dob);
+    document.getElementById("avatarInitial").textContent = state.baby.name.charAt(0).toUpperCase();
+  }
+
+  /* ---------------- Render: Hoy ---------------- */
+  function renderHoy(){
+    var today = todayStr();
+    var todays = state.logs.filter(function(l){ return l.ts.indexOf(today)===0; });
+    var feedCount = todays.filter(function(l){return l.type==="feed";}).length;
+    var diaperCount = todays.filter(function(l){return l.type==="diaper";}).length;
+    var sleepMinutes = todays.filter(function(l){return l.type==="sleep";}).reduce(function(sum,l){return sum+(l.detail.minutes||0);},0);
+    document.getElementById("stat-feed").textContent = feedCount;
+    document.getElementById("stat-diaper").textContent = diaperCount;
+    document.getElementById("stat-sleep").textContent = (sleepMinutes/60).toFixed(1).replace(/\.0$/,"")+"h";
+
+    var sorted = todays.slice().sort(function(a,b){ return b.ts.localeCompare(a.ts); });
+    var holder = document.getElementById("timelineToday");
+    if (sorted.length === 0){
+      holder.innerHTML = '<div class="empty-state">Aún no hay registros hoy. Usa los botones de arriba para empezar.</div>';
+      return;
+    }
+    holder.innerHTML = sorted.map(function(l){
+      var title, meta;
+      if (l.type==="feed"){
+        title = "Alimentación — " + l.detail.kind;
+        meta = l.detail.amount ? l.detail.amount + " ml" : "";
+      } else if (l.type==="diaper"){
+        title = "Pañal — " + l.detail.kind;
+        meta = "";
+      } else {
+        title = "Sueño";
+        meta = l.detail.minutes ? Math.round(l.detail.minutes) + " min" : "";
+      }
+      return '<div class="tl-item">'+
+        '<div class="tl-dot '+l.type+'"></div>'+
+        '<div class="tl-body"><div class="tl-title">'+title+'</div><div class="tl-meta">'+fmtTime(l.ts)+(meta?" · "+meta:"")+'</div></div>'+
+        '<button class="tl-del" data-id="'+l.id+'" aria-label="Eliminar">×</button>'+
+      '</div>';
+    }).join("");
+    holder.querySelectorAll(".tl-del").forEach(function(btn){
+      btn.addEventListener("click", function(){
+        state.logs = state.logs.filter(function(l){ return l.id !== btn.getAttribute("data-id"); });
+        saveState(); renderHoy();
+      });
+    });
+  }
+
+  /* ---------------- Quick log sheet ---------------- */
+  var backdrop = document.getElementById("logSheetBackdrop");
+  var sheet = document.getElementById("logSheet");
+  function closeSheet(){ backdrop.classList.remove("open"); sheet.innerHTML=""; }
+  backdrop.addEventListener("click", function(e){ if (e.target===backdrop) closeSheet(); });
+
+  function openFeedSheet(){
+    var chosenKind = "Pecho";
+    sheet.innerHTML =
+      '<div class="sheet-title display">Registrar alimentación</div>'+
+      '<div class="choice-row" id="feedKinds">'+
+        ["Pecho izq.","Pecho der.","Ambos pechos","Fórmula","Mixta"].map(function(k){
+          return '<button class="choice-chip'+(k===chosenKind?" active":"")+'" data-k="'+k+'">'+k+'</button>';
+        }).join("")+
+      '</div>'+
+      '<div class="field"><label>Cantidad (ml) — opcional</label><input type="number" id="feedAmount" placeholder="Ej. 90"></div>'+
+      '<div class="sheet-actions"><button class="btn-secondary" id="feedCancel">Cancelar</button><button class="btn-primary" id="feedSave">Guardar</button></div>';
+    sheet.querySelectorAll("#feedKinds .choice-chip").forEach(function(c){
+      c.addEventListener("click", function(){
+        sheet.querySelectorAll("#feedKinds .choice-chip").forEach(function(x){x.classList.remove("active");});
+        c.classList.add("active"); chosenKind = c.getAttribute("data-k");
+      });
+    });
+    document.getElementById("feedCancel").addEventListener("click", closeSheet);
+    document.getElementById("feedSave").addEventListener("click", function(){
+      var amt = parseFloat(document.getElementById("feedAmount").value);
+      state.logs.push({ id: uid(), type:"feed", ts: new Date().toISOString(), detail:{ kind: chosenKind, amount: isNaN(amt)?null:amt } });
+      saveState(); closeSheet(); renderHoy();
+    });
+    backdrop.classList.add("open");
+  }
+
+  function openDiaperSheet(){
+    var chosenKind = "Mojado";
+    sheet.innerHTML =
+      '<div class="sheet-title display">Registrar pañal</div>'+
+      '<div class="choice-row" id="diaperKinds">'+
+        ["Mojado","Sucio","Ambos"].map(function(k){
+          return '<button class="choice-chip'+(k===chosenKind?" active":"")+'" data-k="'+k+'">'+k+'</button>';
+        }).join("")+
+      '</div>'+
+      '<div class="sheet-actions"><button class="btn-secondary" id="diapCancel">Cancelar</button><button class="btn-primary" id="diapSave">Guardar</button></div>';
+    sheet.querySelectorAll("#diaperKinds .choice-chip").forEach(function(c){
+      c.addEventListener("click", function(){
+        sheet.querySelectorAll("#diaperKinds .choice-chip").forEach(function(x){x.classList.remove("active");});
+        c.classList.add("active"); chosenKind = c.getAttribute("data-k");
+      });
+    });
+    document.getElementById("diapCancel").addEventListener("click", closeSheet);
+    document.getElementById("diapSave").addEventListener("click", function(){
+      state.logs.push({ id: uid(), type:"diaper", ts: new Date().toISOString(), detail:{ kind: chosenKind } });
+      saveState(); closeSheet(); renderHoy();
+    });
+    backdrop.classList.add("open");
+  }
+
+  function openSleepSheet(){
+    sheet.innerHTML =
+      '<div class="sheet-title display">Registrar sueño</div>'+
+      '<div class="field"><label>Duración (minutos)</label><input type="number" id="sleepMinutes" placeholder="Ej. 90"></div>'+
+      '<div class="sheet-actions"><button class="btn-secondary" id="sleepCancel">Cancelar</button><button class="btn-primary" id="sleepSave">Guardar</button></div>';
+    document.getElementById("sleepCancel").addEventListener("click", closeSheet);
+    document.getElementById("sleepSave").addEventListener("click", function(){
+      var mins = parseFloat(document.getElementById("sleepMinutes").value);
+      if (isNaN(mins) || mins<=0){ alert("Ingresa una duración válida."); return; }
+      state.logs.push({ id: uid(), type:"sleep", ts: new Date().toISOString(), detail:{ minutes: mins } });
+      saveState(); closeSheet(); renderHoy();
+    });
+    backdrop.classList.add("open");
+  }
+
+  document.getElementById("qb-feed").addEventListener("click", openFeedSheet);
+  document.getElementById("qb-diaper").addEventListener("click", openDiaperSheet);
+  document.getElementById("qb-sleep").addEventListener("click", openSleepSheet);
+
+  /* ---------------- Growth chart ---------------- */
+  var currentMetric = "weight";
+  document.querySelectorAll("#metricSeg .seg-btn").forEach(function(btn){
+    btn.addEventListener("click", function(){
+      document.querySelectorAll("#metricSeg .seg-btn").forEach(function(b){b.classList.remove("active");});
+      btn.classList.add("active");
+      currentMetric = btn.getAttribute("data-metric");
+      renderChart();
+    });
+  });
+
+  function interpRef(sex, metric, months){
+    var table = GROWTH_REF[sex][metric];
+    var keys = Object.keys(table).map(Number).sort(function(a,b){return a-b;});
+    if (months <= keys[0]) return table[keys[0]];
+    if (months >= keys[keys.length-1]) return table[keys[keys.length-1]];
+    for (var i=0;i<keys.length-1;i++){
+      if (months >= keys[i] && months <= keys[i+1]){
+        var t = (months-keys[i])/(keys[i+1]-keys[i]);
+        return table[keys[i]] + t*(table[keys[i+1]]-table[keys[i]]);
+      }
+    }
+    return table[keys[keys.length-1]];
+  }
+
+  function renderChart(){
+    if (!state.baby) return;
+    var sex = state.baby.sex;
+    var field = METRIC_FIELD[currentMetric];
+    var points = state.growth.filter(function(g){ return g[field]!=null; })
+      .map(function(g){ return { m: monthsBetween(state.baby.dob, g.date), v: g[field] }; })
+      .sort(function(a,b){ return a.m-b.m; });
+
+    var maxM = Math.max(12, points.length ? points[points.length-1].m+0.5 : 1);
+    var W=600,H=260,padL=42,padR=14,padT=16,padB=28;
+    var innerW = W-padL-padR, innerH = H-padT-padB;
+
+    var refPts = [0,1,2,3,4,5,6,9,12].filter(function(m){return m<=maxM+0.01;});
+    if (refPts.indexOf(12)===-1 && maxM>=12) refPts.push(12);
+    var refVals = refPts.map(function(m){ return interpRef(sex, currentMetric, m); });
+    var band = BAND_PCT[currentMetric];
+    var lowVals = refVals.map(function(v){return v*(1-band);});
+    var highVals = refVals.map(function(v){return v*(1+band);});
+
+    var allV = refVals.concat(lowVals).concat(highVals).concat(points.map(function(p){return p.v;}));
+    var minV = Math.min.apply(null, allV), maxV = Math.max.apply(null, allV);
+    if (minV===maxV){ minV -= 1; maxV += 1; }
+    var pad = (maxV-minV)*0.08;
+    minV -= pad; maxV += pad;
+
+    function x(m){ return padL + (m/maxM)*innerW; }
+    function y(v){ return padT + innerH - ((v-minV)/(maxV-minV))*innerH; }
+
+    function pathFrom(ms, vs){
+      return ms.map(function(m,i){ return (i===0?"M":"L")+x(m).toFixed(1)+","+y(vs[i]).toFixed(1); }).join(" ");
+    }
+    var bandPath = pathFrom(refPts, highVals) + " L" + x(refPts[refPts.length-1]).toFixed(1)+","+y(lowVals[lowVals.length-1]).toFixed(1)+" "+
+      refPts.slice().reverse().map(function(m,i){ return "L"+x(m).toFixed(1)+","+y(lowVals[lowVals.length-1-i]).toFixed(1); }).join(" ") + " Z";
+    var medianPath = pathFrom(refPts, refVals);
+    var dataPath = points.length ? pathFrom(points.map(function(p){return p.m;}), points.map(function(p){return p.v;})) : "";
+
+    var gridLines = "";
+    for (var gm=0; gm<=maxM; gm+=Math.ceil(maxM/6)||1){
+      gridLines += '<line x1="'+x(gm).toFixed(1)+'" y1="'+padT+'" x2="'+x(gm).toFixed(1)+'" y2="'+(padT+innerH)+'" stroke="var(--border)" stroke-width="1"/>';
+      gridLines += '<text x="'+x(gm).toFixed(1)+'" y="'+(H-8)+'" font-size="10" fill="var(--muted)" text-anchor="middle">'+gm+'m</text>';
+    }
+
+    var svg = '<svg viewBox="0 0 '+W+' '+H+'" width="100%" style="display:block">'+
+      gridLines+
+      '<path d="'+bandPath+'" fill="var(--sage)" fill-opacity="0.18" stroke="none"/>'+
+      '<path d="'+medianPath+'" fill="none" stroke="var(--sage-deep)" stroke-width="1.5" stroke-dasharray="4,3"/>'+
+      (dataPath ? '<path d="'+dataPath+'" fill="none" stroke="var(--amber-deep)" stroke-width="2.5"/>' : '')+
+      points.map(function(p){ return '<circle cx="'+x(p.m).toFixed(1)+'" cy="'+y(p.v).toFixed(1)+'" r="4" fill="var(--amber-deep)"/>'; }).join("")+
+      '</svg>';
+    document.getElementById("chartHolder").innerHTML =
+      '<div style="font-size:12.5px;color:var(--muted);margin-bottom:6px;">'+METRIC_LABEL[currentMetric]+' vs. edad</div>'+svg;
+  }
+
+  document.getElementById("gr-save").addEventListener("click", function(){
+    var date = document.getElementById("gr-date").value || todayStr();
+    var w = parseFloat(document.getElementById("gr-weight").value);
+    var h = parseFloat(document.getElementById("gr-height").value);
+    var hd = parseFloat(document.getElementById("gr-head").value);
+    if (isNaN(w) && isNaN(h)){ alert("Ingresa al menos peso o talla."); return; }
+    state.growth.push({ id: uid(), date: date, weight: isNaN(w)?null:w, height: isNaN(h)?null:h, head: isNaN(hd)?null:hd });
+    saveState();
+    document.getElementById("gr-weight").value="";
+    document.getElementById("gr-height").value="";
+    document.getElementById("gr-head").value="";
+    renderChart();
+  });
+
+  /* ---------------- Vaccines ---------------- */
+  function renderVaccines(){
+    if (!state.baby) return;
+    var dob = parseDate(state.baby.dob);
+    var now = new Date();
+    var byMonth = {};
+    VACCINES.forEach(function(v){ (byMonth[v.month] = byMonth[v.month]||[]).push(v); });
+    var months = Object.keys(byMonth).map(Number).sort(function(a,b){return a-b;});
+    var html = "";
+    months.forEach(function(m){
+      var due = new Date(dob); due.setMonth(due.getMonth()+m);
+      html += '<div class="age-group-label">'+(m===0?"Al nacer":m+" meses")+' · estimado '+due.toLocaleDateString("es-MX",{day:"numeric",month:"short",year:"numeric"})+'</div>';
+      byMonth[m].forEach(function(v){
+        var rec = state.vaccines[v.id] || {done:false,date:null};
+        var status = rec.done ? '<span class="badge done">Aplicada</span>' :
+          (now >= due ? '<span class="badge soon">Pendiente</span>' : '<span class="badge pending">Próxima</span>');
+        html += '<div class="list-item">'+
+          '<button class="check-circle'+(rec.done?" done":"")+'" data-id="'+v.id+'" aria-label="Marcar aplicada">✓</button>'+
+          '<div class="li-body"><div class="li-title">'+v.name+'</div>'+(v.desc?'<div class="li-meta">'+v.desc+'</div>':'')+'</div>'+
+          status+
+        '</div>';
+      });
+    });
+    var holder = document.getElementById("vaccineList");
+    holder.innerHTML = html;
+    holder.querySelectorAll(".check-circle").forEach(function(btn){
+      btn.addEventListener("click", function(){
+        var id = btn.getAttribute("data-id");
+        var rec = state.vaccines[id] || {done:false,date:null};
+        rec.done = !rec.done;
+        rec.date = rec.done ? todayStr() : null;
+        state.vaccines[id] = rec;
+        saveState(); renderVaccines();
+      });
+    });
+  }
+
+  /* ---------------- Milestones ---------------- */
+  function renderMilestones(){
+    var html = "";
+    MILESTONES.forEach(function(group){
+      html += '<div class="age-group-label">'+group.range+'</div>';
+      group.items.forEach(function(it){
+        var rec = state.milestones[it.id] || {done:false};
+        html += '<div class="list-item">'+
+          '<button class="check-circle'+(rec.done?" done":"")+'" data-id="'+it.id+'" aria-label="Marcar logrado">✓</button>'+
+          '<div class="li-body"><div class="li-title">'+it.text+'</div></div>'+
+        '</div>';
+      });
+    });
+    var holder = document.getElementById("milestoneList");
+    holder.innerHTML = html;
+    holder.querySelectorAll(".check-circle").forEach(function(btn){
+      btn.addEventListener("click", function(){
+        var id = btn.getAttribute("data-id");
+        var rec = state.milestones[id] || {done:false};
+        rec.done = !rec.done;
+        rec.date = rec.done ? todayStr() : null;
+        state.milestones[id] = rec;
+        saveState(); renderMilestones();
+      });
+    });
+  }
+
+  /* ---------------- Más tab ---------------- */
+  function renderMore(){
+    if (!state.baby) return;
+    document.getElementById("moreInfoSummary").textContent =
+      state.baby.name + " · nació el " + fmtDateShort(state.baby.dob) + " · " + (state.baby.sex==="boy"?"niño":"niña") +
+      " · peso al nacer " + state.baby.birthWeight + " kg · talla " + state.baby.birthHeight + " cm";
+  }
+  document.getElementById("editBabyInfo").addEventListener("click", function(){
+    prefillSetupForEdit();
+    showSetup();
+  });
+
+  document.getElementById("shareToday").addEventListener("click", function(){
+    var today = todayStr();
+    var todays = state.logs.filter(function(l){ return l.ts.indexOf(today)===0; });
+    var feedCount = todays.filter(function(l){return l.type==="feed";}).length;
+    var diaperCount = todays.filter(function(l){return l.type==="diaper";}).length;
+    var sleepMinutes = todays.filter(function(l){return l.type==="sleep";}).reduce(function(s,l){return s+(l.detail.minutes||0);},0);
+    var text = "Resumen de hoy de "+(state.baby?state.baby.name:"el bebé")+":\n"+
+      "🍼 Tomas: "+feedCount+"\n"+
+      "👶 Pañales: "+diaperCount+"\n"+
+      "😴 Sueño: "+(sleepMinutes/60).toFixed(1)+" h\n";
+    var url = "https://wa.me/?text="+encodeURIComponent(text);
+    window.open(url, "_blank");
+  });
+
+  document.getElementById("exportData").addEventListener("click", function(){
+    var code = btoa(unescape(encodeURIComponent(JSON.stringify(state))));
+    var ta = document.getElementById("importArea");
+    ta.value = code;
+    ta.select();
+    try {
+      document.execCommand("copy");
+      alert("Código copiado. Pégalo en el otro teléfono dentro de 'Importar código'.");
+    } catch(e){
+      alert("Selecciona y copia el código manualmente.");
+    }
+  });
+  document.getElementById("importData").addEventListener("click", function(){
+    var raw = document.getElementById("importArea").value.trim();
+    if (!raw){ alert("Pega primero el código de respaldo."); return; }
+    try {
+      var imported = JSON.parse(decodeURIComponent(escape(atob(raw))));
+      if (!imported || !imported.baby){ throw new Error("formato inválido"); }
+      if (confirm("Esto reemplazará los datos actuales en este teléfono con el respaldo importado. ¿Continuar?")){
+        state = imported;
+        saveState();
+        showMain();
+        alert("Datos importados correctamente.");
+      }
+    } catch(e){
+      alert("No se pudo leer el código. Verifica que lo copiaste completo.");
+    }
+  });
+
+  /* ---------------- Flags modal ---------------- */
+  document.getElementById("openFlags").addEventListener("click", function(){
+    document.getElementById("flagsBackdrop").classList.add("open");
+  });
+  document.getElementById("closeFlags").addEventListener("click", function(){
+    document.getElementById("flagsBackdrop").classList.remove("open");
+  });
+  document.getElementById("flagsBackdrop").addEventListener("click", function(e){
+    if (e.target === this) this.classList.remove("open");
+  });
+
+  /* ---------------- Init ---------------- */
+  function renderAll(){
+    renderHeader();
+    renderHoy();
+    renderChart();
+    renderVaccines();
+    renderMilestones();
+    renderMore();
+  }
+
+  function init(){
+    state = loadState() || defaultState();
+    document.getElementById("gr-date").value = todayStr();
+    if (state.baby){ showMain(); } else { showSetup(); }
+  }
+  init();
+})();
+</script>
+</body>
+</html>
